@@ -1,5 +1,9 @@
 #include <Wire.h>
 
+#include "variant.h"
+#include <stdio.h>
+#include <adk.h>
+
 #define    MPU9250_ADDRESS            0x68
 #define    MAG_ADDRESS                0x0C
  
@@ -39,6 +43,19 @@ int MAG = 1;
 int GYR = 2;
 
 int ciclo = 0;
+
+char descriptionName[]  = "Saccodimmerda";
+char modelName[]        = "saccodimmerda";         // your Arduino Accessory name (Need to be the same defined in the Android App)
+char manufacturerName[] = "gionji";   // manufacturer (Need to be the same defined in the Android App)
+
+char versionNumber[] = "1.0";          // version (Need to be the same defined in the Android App)
+char serialNumber[] = "1";
+char url[] = "http://www.giovanniburresi.com";    // If there isn't any compatible app installed, Android suggest to visit this url
+
+USBHost Usb;
+ADK adk(&Usb, manufacturerName, modelName, descriptionName, versionNumber, url, serialNumber);
+
+
  
 // This function read Nbytes bytes from I2C device at address Address. 
 // Put read bytes starting at register Register in the Data array. 
@@ -123,28 +140,28 @@ void loop(){
   if(diff && energy > 130){
     if(abs(accBiased[X]) > abs(accBiased[Y]) && abs(accBiased[X]) > abs(accBiased[Z])){
       if(accBiased[X] > 0){   
-        scrivi("d");
+        scrivi('d');
         blinkamelo(1,0,0);
       }else{
-        scrivi("s"); 
+        scrivi('s'); 
         blinkamelo(1,0,1);       
       }     
     }
     else if(abs(accBiased[Y]) > abs(accBiased[X]) && abs(accBiased[Y]) > abs(accBiased[Z])){
       if(accBiased[Y] > 0){   
-        scrivi("u");
+        scrivi('u');
         blinkamelo(0,1,0);
       }else{
-        scrivi("g");   
+        scrivi('g');   
         blinkamelo(1,1,0);     
       } 
     }
     else if(abs(accBiased[Z]) > abs(accBiased[Y]) && abs(accBiased[Z]) > abs(accBiased[X])) {
       if(accBiased[Z] > 0){   
-        scrivi("a");
+        scrivi('a');
         blinkamelo(0,0,1);
       }else{
-        scrivi("i");     
+        scrivi('i');     
         blinkamelo(0,1,1);   
       } 
     }  
@@ -369,14 +386,21 @@ int measureEnergy(int val){
   return mean;
 }
 
+uint8_t bufWrite[1];
 long lastTime = 0;
-void scrivi(String s){
+void scrivi(char s){
 
-  long t = millis();
-
-  if(t - lastTime > 500)
-    Serial.println(s);
-
-  lastTime = t;    
+  Usb.Task();
+  
+  if (adk.isReady()) { 
+    long t = millis();
+  
+    if(t - lastTime > 500){
+      bufWrite[0] = (uint8_t)(s);  //  calculate the distance in centimeters
+      adk.write(sizeof(bufWrite), (uint8_t *)bufWrite); //write the distance to Android
+    }
+  
+    lastTime = t;  
+  }  
 }
 
